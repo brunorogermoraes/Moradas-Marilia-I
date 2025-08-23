@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo de Serviços - Moradas Marília 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Tom de ardósia muito claro (slate-50) */
+            color: #334155; /* Tom de ardósia escuro (slate-700) */
+        }
+
+        /* Animação suave para os cards */
+        .service-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+        
+        /* Estilo para o modal de mensagem */
+        .modal {
+            display: none; /* Oculta o modal por padrão */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            padding: 2.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            max-width: 32rem;
+            width: 90%;
+            position: relative;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        /* Estilo para o modal de carregamento */
+        .loading-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 sm:p-6 flex flex-col items-center">
+
+    <header class="w-full max-w-5xl flex justify-between items-center py-4 px-6 bg-white rounded-xl shadow-md mb-8 border-b-2 border-gray-100">
+        <div class="flex items-center gap-3">
+            <svg class="w-8 h-8 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" />
+            </svg>
+            <h1 class="text-xl sm:text-2xl font-bold text-slate-800">Moradas Marília 1</h1>
+        </div>
+        <nav class="space-x-2 sm:space-x-4">
+            <button id="public-btn" class="px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                Serviços
+            </button>
+            <button id="admin-btn" class="px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+                Administrador
+            </button>
+        </nav>
+    </header>
+
+    <div id="content" class="w-full max-w-5xl"></div>
+    
+    <div id="message-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-xl font-bold text-slate-800 mb-4">Aviso ✨</h3>
+            <p id="modal-text" class="text-slate-700 mb-4 whitespace-pre-wrap"></p>
+            <div class="modal-buttons">
+                <button id="copy-btn" class="flex-1 py-2 px-4 bg-teal-600 text-white font-bold rounded-lg hover:bg-teal-700 transition-colors duration-300">
+                    Copiar
+                </button>
+                <button id="close-btn" class="flex-1 py-2 px-4 bg-slate-200 text-slate-800 font-bold rounded-lg hover:bg-slate-300 transition-colors duration-300">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading-modal" class="loading-modal">
+        <div class="bg-white p-8 rounded-lg shadow-lg flex items-center gap-4">
+            <svg class="animate-spin h-5 w-5 text-teal-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-slate-700 font-medium">Processando...</p>
+        </div>
+    </div>
+    
+    <script type="module">
+        // Importa as funções necessárias do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, deleteDoc, onSnapshot, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCKh5Z3-a1tdEI8mM4ED-8xHNMSyh0lSM8",
+            authDomain: "projeto-6cf77.firebaseapp.com",
+            projectId: "projeto-6cf77",
+            storageBucket: "projeto-6cf77.firebasestorage.app",
+            messagingSenderId: "564319159299",
+            appId: "1:564319159299:web:f3fa3374c1a2e2017eba36"
+        };
+
+        // Inicializa o Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // Variáveis de estado
+        let providers = [];
+        let view = 'public';
+        let adminLoggedIn = false;
+        let searchTerm = '';
+        let form = { name: '', service: '', casa: '', contact: '' };
+
+        // Referências aos elementos do DOM
+        const contentDiv = document.getElementById('content');
+        const publicBtn = document.getElementById('public-btn');
+        const adminBtn = document.getElementById('admin-btn');
+        const messageModal = document.getElementById('message-modal');
+        const modalText = document.getElementById('modal-text');
+        const copyBtn = document.getElementById('copy-btn');
+        const closeBtn = document.getElementById('close-btn');
+        const loadingModal = document.getElementById('loading-modal');
+
+        // Adiciona um listener para a coleção de fornecedores
+        function listenForProviders() {
+            const providersCollectionRef = collection(db, `fornecedores`);
+            onSnapshot(providersCollectionRef, (snapshot) => {
+                providers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            }, (error) => {
+                console.error("Erro ao ouvir a coleção:", error);
+                showModal("Erro ao carregar os fornecedores. Tente recarregar a página.");
+            });
+        }
+
+        async function addProviderToFirestore(newProvider) {
+            loadingModal.style.display = 'flex';
+            try {
+                await addDoc(collection(db, `fornecedores`), newProvider);
+                form = { name: '', service: '', casa: '', contact: '' };
+                showModal("Fornecedor adicionado com sucesso!");
+                renderAdminPage();
+            } catch (e) {
+                console.error("Erro ao adicionar documento: ", e);
+                showModal("Erro ao adicionar o fornecedor. Tente novamente.");
+            } finally {
+                loadingModal.style.display = 'none';
+            }
+        }
+
+        async function removeProviderFromFirestore(providerId) {
+            loadingModal.style.display = 'flex';
+            try {
+                await deleteDoc(doc(db, `fornecedores`, providerId));
+                showModal("Fornecedor removido com sucesso!");
+            } catch (e) {
+                console.error("Erro ao remover documento: ", e);
+                showModal("Erro ao remover o fornecedor. Tente novamente.");
+            } finally {
+                loadingModal.style.display = 'none';
+            }
+        }
+
+        function render() {
+            if (view === 'public') {
+                renderPublicPage();
+            } else {
+                renderAdminPage();
+            }
+            updateNavButtons();
+        }
+
+        function updateNavButtons() {
+            if (view === 'public') {
+                publicBtn.classList.add('bg-teal-600', 'text-white');
+                publicBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+                adminBtn.classList.add('text-slate-600', 'hover:bg-slate-100');
+                adminBtn.classList.remove('bg-teal-600', 'text-white');
+            } else {
+                adminBtn.classList.add('bg-teal-600', 'text-white');
+                adminBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+                publicBtn.classList.add('text-slate-600', 'hover:bg-slate-100');
+                publicBtn.classList.remove('bg-teal-600', 'text-white');
+            }
+        }
+
+        function renderPublicPage() {
+            const filteredProviders = providers.filter(provider =>
+                provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                provider.service.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+
+            let publicHtml = `
+                <main class="w-full max-w-5xl animate-fade-in">
+                    <div class="text-center mb-8">
+                        <h2 class="text-3xl font-bold text-slate-800 mb-2">Serviços & Talentos</h2>
+                        <p class="text-slate-500">Encontre aqui os serviços oferecidos pelos moradores do condomínio.</p>
+                    </div>
+                    <div class="mb-8 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-5 h-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                        </div>
+                        <input
+                            type="text"
+                            id="search-input"
+                            placeholder="Buscar por nome ou serviço..."
+                            value="${searchTerm}"
+                            class="w-full p-3 pl-10 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors duration-300 shadow-sm"
+                        />
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${filteredProviders.length > 0
+                            ? filteredProviders.map(provider => `
+                                <div class="service-card bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col justify-between">
+                                    <div>
+                                        <h3 class="text-xl font-semibold text-slate-800 mb-1">${provider.name}</h3>
+                                        <p class="text-teal-600 font-medium mb-4">${provider.service}</p>
+                                        <div class="text-sm text-slate-500 flex items-center gap-2">
+                                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" /></svg>
+                                            Casa: <span class="font-semibold text-slate-700">${provider.casa}</span>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href="https://wa.me/55${provider.contact.replace(/\D/g, '')}?text=Olá, vi seu serviço no catálogo do condomínio e gostaria de mais informações."
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        class="mt-6 w-full flex items-center justify-center gap-2 bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-600 transition-colors duration-300"
+                                    >
+                                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 14.2l-1.5-0.6c-0.2-0.1-0.5 0-0.7 0.2l-1.1 1.3c-1.4-0.8-2.6-2-3.4-3.4l1.3-1.1c0.2-0.2 0.2-0.5 0.2-0.7l-0.6-1.5c-0.1-0.3-0.4-0.5-0.7-0.5h-1.6c-0.3 0-0.6 0.2-0.7 0.5c-0.5 1.7-0.1 3.6 1.2 5.6c1.6 2.4 4 4.1 6.5 4.1c0.2 0 0.3 0 0.5 0c1.7-0.1 3.3-1.3 3.3-1.3c0.3-0.1 0.4-0.4 0.4-0.7v-1.6c0-0.4-0.2-0.6-0.5-0.7zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8s8 3.6 8 8s-3.6 8-8 8z"/></svg>
+                                        Entrar em Contato
+                                    </a>
+                                </div>
+                            `).join('')
+                            : `<p class="col-span-full text-center text-slate-500 py-10">Nenhum serviço encontrado com o termo buscado.</p>`
+                        }
+                    </div>
+                </main>
+            `;
+            contentDiv.innerHTML = publicHtml;
+            document.getElementById('search-input')?.addEventListener('input', (e) => {
+                searchTerm = e.target.value;
+                renderPublicPage();
+            });
+        }
+
+        function renderAdminPage() {
+            if (!adminLoggedIn) {
+                contentDiv.innerHTML = `
+                    <div class="flex justify-center items-center">
+                        <div class="w-full max-w-md p-8 bg-white rounded-xl shadow-lg border border-gray-200">
+                            <h2 class="text-2xl font-bold text-center text-slate-800 mb-6">Acesso Administrativo</h2>
+                            <form id="admin-login-form" class="space-y-4">
+                                <div>
+                                    <label for="username" class="block text-sm font-medium text-slate-700 mb-1">E-mail</label>
+                                    <input type="email" id="username" name="username" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div>
+                                    <label for="password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                                    <input type="password" id="password" name="password" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <p id="login-error-message" class="text-red-500 text-center text-sm hidden"></p>
+                                <button type="submit" class="w-full py-3 px-6 bg-teal-600 text-white font-bold rounded-lg shadow-md hover:bg-teal-700 transition-colors duration-300">
+                                    Entrar
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('admin-login-form')?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    loadingModal.style.display = 'flex';
+                    const email = e.target.username.value;
+                    const password = e.target.password.value;
+                    const errorMessage = document.getElementById('login-error-message');
+                    try {
+                        await signInWithEmailAndPassword(auth, email, password);
+                        adminLoggedIn = true;
+                        renderAdminPage();
+                    } catch (error) {
+                        errorMessage.textContent = "E-mail ou senha inválidos. Tente novamente.";
+                        errorMessage.classList.remove('hidden');
+                    } finally {
+                        loadingModal.style.display = 'none';
+                    }
+                });
+            } else {
+                let adminHtml = `
+                    <main class="w-full max-w-5xl space-y-8">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-3xl font-bold text-slate-800">Painel do Administrador</h2>
+                            <button id="logout-btn" class="py-2 px-4 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 transition-colors duration-300">
+                                Sair
+                            </button>
+                        </div>
+
+                        <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-bold text-slate-800 mb-4">Adicionar Novo Prestador</h3>
+                            <form id="add-provider-form" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="md:col-span-2">
+                                    <label for="name" class="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+                                    <input type="text" id="name" name="name" value="${form.name}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div class="md:col-span-2">
+                                    <label for="service" class="block text-sm font-medium text-slate-700 mb-1">Serviço Prestado</label>
+                                    <input type="text" id="service" name="service" value="${form.service}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div>
+                                    <label for="casa" class="block text-sm font-medium text-slate-700 mb-1">Número da Casa</label>
+                                    <input type="text" id="casa" name="casa" value="${form.casa}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div>
+                                    <label for="contact" class="block text-sm font-medium text-slate-700 mb-1">Contato (WhatsApp com DDD)</label>
+                                    <input type="text" id="contact" name="contact" value="${form.contact}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
+                                </div>
+                                <div class="md:col-span-2">
+                                    <button type="submit" id="submit-btn" class="w-full py-3 px-6 bg-teal-600 text-white font-bold rounded-lg shadow-md hover:bg-teal-700 transition-colors duration-300">
+                                        Adicionar Prestador
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="bg-white p-8 rounded-xl shadow-lg border border-gray-200">
+                            <h3 class="text-xl font-bold text-slate-800 mb-4">Prestadores Cadastrados</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full table-auto">
+                                    <thead>
+                                        <tr class="bg-slate-100 text-slate-600 uppercase text-sm leading-normal">
+                                            <th class="py-3 px-6 text-left">Nome</th>
+                                            <th class="py-3 px-6 text-left">Serviço</th>
+                                            <th class="py-3 px-6 text-center">Casa</th>
+                                            <th class="py-3 px-6 text-center">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-600 text-sm font-light">
+                                        ${providers.map(provider => `
+                                            <tr class="border-b border-gray-200 hover:bg-slate-50">
+                                                <td class="py-3 px-6 text-left whitespace-nowrap">${provider.name}</td>
+                                                <td class="py-3 px-6 text-left">${provider.service}</td>
+                                                <td class="py-3 px-6 text-center">${provider.casa}</td>
+                                                <td class="py-3 px-6 text-center">
+                                                    <button class="remove-btn text-red-500 hover:text-red-700" data-id="${provider.id}" title="Remover">
+                                                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.124-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.077-2.09.921-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </main>
+                `;
+                contentDiv.innerHTML = adminHtml;
+
+                document.getElementById('logout-btn')?.addEventListener('click', async () => {
+                    await signOut(auth);
+                    adminLoggedIn = false;
+                    renderAdminPage();
+                });
+                
+                document.getElementById('add-provider-form')?.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    addProviderToFirestore({
+                        name: e.target.name.value,
+                        service: e.target.service.value,
+                        casa: e.target.casa.value,
+                        contact: e.target.contact.value,
+                    });
+                });
+                
+                document.querySelectorAll('.remove-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const id = e.currentTarget.dataset.id;
+                        if (window.confirm('Tem certeza que deseja remover este prestador?')) {
+                            removeProviderFromFirestore(id);
+                        }
+                    });
+                });
+            }
+        }
+        
+        function showModal(message) {
+            modalText.innerText = message;
+            messageModal.style.display = 'flex';
+        }
+
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(modalText.innerText).then(() => {
+                alert("Mensagem copiada!");
+            }, (err) => {
+                console.error("Falha ao copiar: ", err);
+                alert("Não foi possível copiar.");
+            });
+        });
+
+        closeBtn.addEventListener('click', () => {
+            messageModal.style.display = 'none';
+        });
+
+        publicBtn.addEventListener('click', () => { view = 'public'; render(); });
+        adminBtn.addEventListener('click', () => { view = 'admin'; render(); });
+
+        // Inicia a aplicação
+        onAuthStateChanged(auth, (user) => {
+            if (user && !user.isAnonymous) {
+                adminLoggedIn = true;
+                if(view === 'admin') renderAdminPage();
+            } else {
+                adminLoggedIn = false;
+            }
+        });
+
+        signInAnonymously(auth)
+            .then(() => listenForProviders())
+            .catch((error) => console.error("Erro na autenticação anônima:", error));
+
+    </script>
+</body>
+</html>
