@@ -220,13 +220,44 @@
             }
         }
 
-        function renderPublicPage() {
+        function renderProvidersList() {
+            const providersListDiv = document.getElementById('providers-list');
+            if (!providersListDiv) return; // Evita erro se o elemento não existir
+
             const filteredProviders = providers.filter(provider =>
                 provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 provider.service.toLowerCase().includes(searchTerm.toLowerCase())
             );
 
-            let publicHtml = `
+            const listHtml = filteredProviders.length > 0
+                ? filteredProviders.map(provider => `
+                    <div class="service-card bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col justify-between">
+                        <div>
+                            <h3 class="text-xl font-semibold text-slate-800 mb-1">${provider.name}</h3>
+                            <p class="text-teal-600 font-medium mb-4">${provider.service}</p>
+                            <div class="text-sm text-slate-500 flex items-center gap-2">
+                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" /></svg>
+                                Casa: <span class="font-semibold text-slate-700">${provider.casa}</span>
+                            </div>
+                        </div>
+                        <a
+                            href="https://wa.me/55${provider.contact.replace(/\D/g, '')}?text=Olá, vi seu serviço no catálogo do condomínio e gostaria de mais informações."
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="mt-6 w-full flex items-center justify-center gap-2 bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-600 transition-colors duration-300"
+                        >
+                            <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 14.2l-1.5-0.6c-0.2-0.1-0.5 0-0.7 0.2l-1.1 1.3c-1.4-0.8-2.6-2-3.4-3.4l1.3-1.1c0.2-0.2 0.2-0.5 0.2-0.7l-0.6-1.5c-0.1-0.3-0.4-0.5-0.7-0.5h-1.6c-0.3 0-0.6 0.2-0.7 0.5c-0.5 1.7-0.1 3.6 1.2 5.6c1.6 2.4 4 4.1 6.5 4.1c0.2 0 0.3 0 0.5 0c1.7-0.1 3.3-1.3 3.3-1.3c0.3-0.1 0.4-0.4 0.4-0.7v-1.6c0-0.4-0.2-0.6-0.5-0.7zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8s8 3.6 8 8s-3.6 8-8 8z"/></svg>
+                            Entrar em Contato
+                        </a>
+                    </div>
+                `).join('')
+                : `<p class="col-span-full text-center text-slate-500 py-10">Nenhum serviço encontrado com o termo buscado.</p>`;
+
+            providersListDiv.innerHTML = listHtml;
+        }
+
+        function renderPublicPage() {
+            const publicHtml = `
                 <main class="w-full max-w-5xl animate-fade-in">
                     <div class="text-center mb-8">
                         <h2 class="text-3xl font-bold text-slate-800 mb-2">Serviços & Talentos</h2>
@@ -240,43 +271,21 @@
                             type="text"
                             id="search-input"
                             placeholder="Buscar por nome ou serviço..."
-                            value="${searchTerm}"
                             class="w-full p-3 pl-10 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors duration-300 shadow-sm"
                         />
                     </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        ${filteredProviders.length > 0
-                            ? filteredProviders.map(provider => `
-                                <div class="service-card bg-white p-6 rounded-xl shadow-md border border-gray-200 flex flex-col justify-between">
-                                    <div>
-                                        <h3 class="text-xl font-semibold text-slate-800 mb-1">${provider.name}</h3>
-                                        <p class="text-teal-600 font-medium mb-4">${provider.service}</p>
-                                        <div class="text-sm text-slate-500 flex items-center gap-2">
-                                            <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" /></svg>
-                                            Casa: <span class="font-semibold text-slate-700">${provider.casa}</span>
-                                        </div>
-                                    </div>
-                                    <a
-                                        href="https://wa.me/55${provider.contact.replace(/\D/g, '')}?text=Olá, vi seu serviço no catálogo do condomínio e gostaria de mais informações."
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        class="mt-6 w-full flex items-center justify-center gap-2 bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-emerald-600 transition-colors duration-300"
-                                    >
-                                        <svg class="w-5 h-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 14.2l-1.5-0.6c-0.2-0.1-0.5 0-0.7 0.2l-1.1 1.3c-1.4-0.8-2.6-2-3.4-3.4l1.3-1.1c0.2-0.2 0.2-0.5 0.2-0.7l-0.6-1.5c-0.1-0.3-0.4-0.5-0.7-0.5h-1.6c-0.3 0-0.6 0.2-0.7 0.5c-0.5 1.7-0.1 3.6 1.2 5.6c1.6 2.4 4 4.1 6.5 4.1c0.2 0 0.3 0 0.5 0c1.7-0.1 3.3-1.3 3.3-1.3c0.3-0.1 0.4-0.4 0.4-0.7v-1.6c0-0.4-0.2-0.6-0.5-0.7zM12 2C6.5 2 2 6.5 2 12s4.5 10 10 10s10-4.5 10-10S17.5 2 12 2zm0 18c-4.4 0-8-3.6-8-8s3.6-8 8-8s8 3.6 8 8s-3.6 8-8 8z"/></svg>
-                                        Entrar em Contato
-                                    </a>
-                                </div>
-                            `).join('')
-                            : `<p class="col-span-full text-center text-slate-500 py-10">Nenhum serviço encontrado com o termo buscado.</p>`
-                        }
-                    </div>
+                    <div id="providers-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        </div>
                 </main>
             `;
             contentDiv.innerHTML = publicHtml;
+            document.getElementById('search-input').value = searchTerm; // Adicionado para manter o valor
+
             document.getElementById('search-input')?.addEventListener('input', (e) => {
                 searchTerm = e.target.value;
-                renderPublicPage();
+                renderProvidersList(); // CHAMA APENAS A FUNÇÃO DE RENDERIZAÇÃO DA LISTA
             });
+            renderProvidersList(); // Chama a função para renderizar a lista inicialmente
         }
 
         function renderAdminPage() {
@@ -451,7 +460,6 @@
         signInAnonymously(auth)
             .then(() => listenForProviders())
             .catch((error) => console.error("Erro na autenticação anônima:", error));
-
     </script>
 </body>
 </html>
