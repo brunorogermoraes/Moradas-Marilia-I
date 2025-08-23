@@ -82,10 +82,10 @@
             <h1 class="text-xl sm:text-2xl font-bold text-slate-800">Moradas Marília 1</h1>
         </div>
         <nav class="space-x-2 sm:space-x-4">
-            <button id="public-btn" class="px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+            <button id="public-btn" class="px-4 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100 transition-all duration-300">
                 Serviços
             </button>
-            <button id="admin-btn" class="px-4 py-2 rounded-lg font-semibold transition-all duration-300">
+            <button id="admin-btn" class="px-4 py-2 rounded-lg font-semibold text-slate-600 hover:bg-slate-100 transition-all duration-300">
                 Administrador
             </button>
         </nav>
@@ -157,6 +157,11 @@
         const closeBtn = document.getElementById('close-btn');
         const loadingModal = document.getElementById('loading-modal');
 
+        // Verifica se os botões existem
+        if (!publicBtn || !adminBtn) {
+            console.error("Botões de navegação não encontrados. Verifique os IDs 'public-btn' e 'admin-btn'.");
+        }
+
         // Adiciona um listener para a coleção de fornecedores
         function listenForProviders() {
             const providersCollectionRef = collection(db, `fornecedores`);
@@ -197,17 +202,22 @@
             }
         }
 
-        // CORREÇÃO PRINCIPAL: As funções de renderização agora são responsáveis por construir o HTML e anexar os event listeners dinâmicos
         function render() {
-            if (view === 'public') {
-                renderPublicPage();
-            } else {
-                renderAdminPage();
+            try {
+                if (view === 'public') {
+                    renderPublicPage();
+                } else {
+                    renderAdminPage();
+                }
+                updateNavButtons();
+            } catch (error) {
+                console.error("Erro ao renderizar a página:", error);
+                showModal("Erro ao carregar a página. Tente novamente.");
             }
-            updateNavButtons();
         }
 
         function updateNavButtons() {
+            if (!publicBtn || !adminBtn) return;
             if (view === 'public') {
                 publicBtn.classList.add('bg-teal-600', 'text-white');
                 publicBtn.classList.remove('text-slate-600', 'hover:bg-slate-100');
@@ -289,11 +299,11 @@
                         />
                     </div>
                     <div id="providers-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        </div>
+                    </div>
                 </main>
             `;
             contentDiv.innerHTML = publicHtml;
-            
+
             const searchInput = document.getElementById('search-input');
             if (searchInput) {
                 searchInput.value = searchTerm;
@@ -301,6 +311,8 @@
                     searchTerm = e.target.value;
                     renderProvidersList();
                 });
+            } else {
+                console.error("Campo de busca não encontrado.");
             }
             renderProvidersList();
         }
@@ -328,24 +340,30 @@
                         </div>
                     </div>
                 `;
-                
-                document.getElementById('admin-login-form')?.addEventListener('submit', async (e) => {
-                    e.preventDefault();
-                    loadingModal.style.display = 'flex';
-                    const email = e.target.username.value;
-                    const password = e.target.password.value;
-                    const errorMessage = document.getElementById('login-error-message');
-                    try {
-                        await signInWithEmailAndPassword(auth, email, password);
-                        adminLoggedIn = true;
-                        renderAdminPage();
-                    } catch (error) {
-                        errorMessage.textContent = "E-mail ou senha inválidos. Tente novamente.";
-                        errorMessage.classList.remove('hidden');
-                    } finally {
-                        loadingModal.style.display = 'none';
-                    }
-                });
+
+                const adminForm = document.getElementById('admin-login-form');
+                if (adminForm) {
+                    adminForm.addEventListener('submit', async (e) => {
+                        e.preventDefault();
+                        loadingModal.style.display = 'flex';
+                        const email = e.target.username.value;
+                        const password = e.target.password.value;
+                        const errorMessage = document.getElementById('login-error-message');
+                        try {
+                            await signInWithEmailAndPassword(auth, email, password);
+                            adminLoggedIn = true;
+                            renderAdminPage();
+                        } catch (error) {
+                            console.error("Erro no login:", error);
+                            errorMessage.textContent = "E-mail ou senha inválidos. Tente novamente.";
+                            errorMessage.classList.remove('hidden');
+                        } finally {
+                            loadingModal.style.display = 'none';
+                        }
+                    });
+                } else {
+                    console.error("Formulário de login administrativo não encontrado.");
+                }
             } else {
                 let adminHtml = `
                     <main class="w-full max-w-5xl space-y-8">
@@ -420,23 +438,38 @@
                 `;
                 contentDiv.innerHTML = adminHtml;
 
-                document.getElementById('logout-btn')?.addEventListener('click', async () => {
-                    await signOut(auth);
-                    adminLoggedIn = false;
-                    renderAdminPage();
-                });
-                
-                document.getElementById('add-provider-form')?.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    addProviderToFirestore({
-                        name: e.target.name.value,
-                        service: e.target.service.value,
-                        casa: e.target.casa.value,
-                        contact: e.target.contact.value,
-                        instagram: e.target.instagram.value || '',
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', async () => {
+                        try {
+                            await signOut(auth);
+                            adminLoggedIn = false;
+                            renderAdminPage();
+                        } catch (error) {
+                            console.error("Erro ao fazer logout:", error);
+                            showModal("Erro ao sair. Tente novamente.");
+                        }
                     });
-                });
-                
+                } else {
+                    console.error("Botão de logout não encontrado.");
+                }
+
+                const addProviderForm = document.getElementById('add-provider-form');
+                if (addProviderForm) {
+                    addProviderForm.addEventListener('submit', (e) => {
+                        e.preventDefault();
+                        addProviderToFirestore({
+                            name: e.target.name.value,
+                            service: e.target.service.value,
+                            casa: e.target.casa.value,
+                            contact: e.target.contact.value,
+                            instagram: e.target.instagram.value || '',
+                        });
+                    });
+                } else {
+                    console.error("Formulário de adição de prestador não encontrado.");
+                }
+
                 document.querySelectorAll('.remove-btn').forEach(button => {
                     button.addEventListener('click', (e) => {
                         const id = e.currentTarget.dataset.id;
@@ -449,8 +482,12 @@
         }
         
         function showModal(message) {
-            modalText.innerText = message;
-            messageModal.style.display = 'flex';
+            if (modalText && messageModal) {
+                modalText.innerText = message;
+                messageModal.style.display = 'flex';
+            } else {
+                console.error("Elementos do modal não encontrados.");
+            }
         }
 
         copyBtn.addEventListener('click', () => {
@@ -463,28 +500,48 @@
         });
 
         closeBtn.addEventListener('click', () => {
-            messageModal.style.display = 'none';
+            if (messageModal) {
+                messageModal.style.display = 'none';
+            }
         });
-        
-        // CORREÇÃO: Inicializa os listeners de navegação apenas uma vez, quando o script carrega.
-        // Isso garante que eles não sejam removidos quando o conteúdo do DOM é alterado.
-        publicBtn.addEventListener('click', () => { view = 'public'; render(); });
-        adminBtn.addEventListener('click', () => { view = 'admin'; render(); });
+
+        // Adiciona listeners de navegação com verificação de erros
+        if (publicBtn) {
+            publicBtn.addEventListener('click', () => {
+                console.log("Botão Serviços clicado");
+                view = 'public';
+                render();
+            });
+        } else {
+            console.error("Botão 'public-btn' não encontrado.");
+        }
+
+        if (adminBtn) {
+            adminBtn.addEventListener('click', () => {
+                console.log("Botão Administrador clicado");
+                view = 'admin';
+                render();
+            });
+        } else {
+            console.error("Botão 'admin-btn' não encontrado.");
+        }
 
         // Inicia a aplicação
         onAuthStateChanged(auth, (user) => {
-            if (user && !user.isAnonymous) {
-                adminLoggedIn = true;
-            } else {
-                adminLoggedIn = false;
-            }
-            // Chama a renderização inicial após a autenticação
+            adminLoggedIn = !!(user && !user.isAnonymous);
+            console.log("Estado de autenticação:", adminLoggedIn ? "Logado como admin" : "Não logado ou anônimo");
             render();
         });
 
         signInAnonymously(auth)
-            .then(() => listenForProviders())
-            .catch((error) => console.error("Erro na autenticação anônima:", error));
+            .then(() => {
+                console.log("Autenticação anônima bem-sucedida");
+                listenForProviders();
+            })
+            .catch((error) => {
+                console.error("Erro na autenticação anônima:", error);
+                showModal("Erro na inicialização do aplicativo. Tente recarregar a página.");
+            });
     </script>
 </body>
 </html>
