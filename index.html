@@ -145,9 +145,16 @@
         let view = 'public';
         let adminLoggedIn = false;
         let searchTerm = '';
-        let form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '' };
+        let selectedCategory = '';
+        let form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] }; // Alterado para categories
         let editMode = false;
         let editProviderId = null;
+
+        // Lista de categorias disponíveis
+        const availableCategories = [
+            'Uber', 'Alimentação', 'Transportadoras', 'Manutenção residencial',
+            'Advocacia', 'Cuidados pessoais', 'Venda de produtos', 'Impressão'
+        ];
 
         // Referências aos elementos do DOM
         const contentDiv = document.getElementById('content');
@@ -179,6 +186,13 @@
         async function saveProviderToFirestore(newProvider) {
             loadingModal.style.display = 'flex';
             try {
+                // Coleta as categorias selecionadas
+                const selectedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(input => input.value);
+                if (selectedCategories.length === 0) {
+                    showModal("Por favor, selecione pelo menos uma categoria.");
+                    return;
+                }
+                newProvider.category = selectedCategories; // Armazena como array
                 if (editMode && editProviderId) {
                     await setDoc(doc(db, `fornecedores`, editProviderId), newProvider, { merge: true });
                     showModal("Fornecedor atualizado com sucesso!");
@@ -186,7 +200,7 @@
                     await addDoc(collection(db, `fornecedores`), newProvider);
                     showModal("Fornecedor adicionado com sucesso!");
                 }
-                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '' };
+                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] };
                 editMode = false;
                 editProviderId = null;
                 renderAdminPage();
@@ -244,10 +258,13 @@
             const providersListDiv = document.getElementById('providers-list');
             if (!providersListDiv) return;
 
-            const filteredProviders = providers.filter(provider =>
-                provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                provider.service.toLowerCase().includes(searchTerm.toLowerCase())
-            );
+            const filteredProviders = providers.filter(provider => {
+                const matchesSearch = provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                      provider.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                      (provider.category && provider.category.some(cat => cat.toLowerCase().includes(searchTerm.toLowerCase())));
+                const matchesCategory = !selectedCategory || (provider.category && provider.category.includes(selectedCategory));
+                return matchesSearch && matchesCategory;
+            });
 
             const listHtml = filteredProviders.length > 0
                 ? filteredProviders.map(provider => `
@@ -255,6 +272,12 @@
                         <div>
                             <h3 class="text-xl font-semibold text-slate-800 mb-1">${provider.name}</h3>
                             <p class="text-teal-600 font-medium mb-4">${provider.service}</p>
+                            ${provider.category && provider.category.length > 0 ? `
+                            <div class="text-sm text-slate-500 flex items-center gap-2 mb-4">
+                                <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5l6-6 6 6m-6-6v12" /></svg>
+                                Categoria: <span class="font-semibold text-slate-700">${provider.category.join(', ')}</span>
+                            </div>
+                            ` : ''}
                             ${provider.casa ? `
                             <div class="text-sm text-slate-500 flex items-center gap-2 mb-4">
                                 <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 11h-1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H5a1 1 0 01-1-1v-6H3a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" /></svg>
@@ -292,9 +315,21 @@
                         </div>
                     </div>
                 `).join('')
-                : `<p class="col-span-full text-center text-slate-500 py-10">Nenhum serviço encontrado com o termo buscado.</p>`;
+                : `<p class="col-span-full text-center text-slate-500 py-10">Nenhum serviço encontrado para a categoria ou termo buscado.</p>`;
 
             providersListDiv.innerHTML = listHtml;
+
+            // Atualiza o estilo dos botões de categoria
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            categoryButtons.forEach(btn => {
+                if (btn.dataset.category === selectedCategory) {
+                    btn.classList.add('bg-teal-600', 'text-white');
+                    btn.classList.remove('bg-slate-200', 'text-slate-600', 'hover:bg-slate-300');
+                } else {
+                    btn.classList.add('bg-slate-200', 'text-slate-600', 'hover:bg-slate-300');
+                    btn.classList.remove('bg-teal-600', 'text-white');
+                }
+            });
         }
 
         function renderPublicPage() {
@@ -311,9 +346,20 @@
                         <input
                             type="text"
                             id="search-input"
-                            placeholder="Buscar por nome ou serviço..."
+                            placeholder="Buscar por nome, serviço ou categoria..."
                             class="w-full p-3 pl-10 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent transition-colors duration-300 shadow-sm"
                         />
+                    </div>
+                    <div class="mb-8 flex flex-wrap gap-2 justify-center">
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="">Todos</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Uber">Uber</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Alimentação">Alimentação</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Transportadoras">Transportadoras</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Manutenção residencial">Manutenção residencial</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Advocacia">Advocacia</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Cuidados pessoais">Cuidados pessoais</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Venda de produtos">Venda de produtos</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Impressão">Impressão</button>
                     </div>
                     <div id="providers-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     </div>
@@ -331,6 +377,16 @@
             } else {
                 console.error("Campo de busca não encontrado.");
             }
+
+            // Adiciona eventos de clique aos botões de categoria
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    selectedCategory = button.dataset.category;
+                    renderProvidersList();
+                });
+            });
+
             renderProvidersList();
         }
 
@@ -402,6 +458,17 @@
                                     <label for="service" class="block text-sm font-medium text-slate-700 mb-1">Serviço Prestado</label>
                                     <input type="text" id="service" name="service" value="${form.service}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
                                 </div>
+                                <div class="md:col-span-2">
+                                    <label class="block text-sm font-medium text-slate-700 mb-1">Categorias (selecione pelo menos uma)</label>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        ${availableCategories.map(category => `
+                                            <label class="flex items-center space-x-2">
+                                                <input type="checkbox" name="category" value="${category}" ${form.categories.includes(category) ? 'checked' : ''} class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"/>
+                                                <span class="text-sm text-slate-700">${category}</span>
+                                            </label>
+                                        `).join('')}
+                                    </div>
+                                </div>
                                 <div>
                                     <label for="casa" class="block text-sm font-medium text-slate-700 mb-1">Número da Casa (opcional)</label>
                                     <input type="text" id="casa" name="casa" value="${form.casa}" class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
@@ -434,6 +501,7 @@
                                         <tr class="bg-slate-100 text-slate-600 uppercase text-sm leading-normal">
                                             <th class="py-3 px-6 text-left">Nome</th>
                                             <th class="py-3 px-6 text-left">Serviço</th>
+                                            <th class="py-3 px-6 text-left">Categorias</th>
                                             <th class="py-3 px-6 text-center">Casa</th>
                                             <th class="py-3 px-6 text-center">Horário</th>
                                             <th class="py-3 px-6 text-center">Ações</th>
@@ -444,6 +512,7 @@
                                             <tr class="border-b border-gray-200 hover:bg-slate-50">
                                                 <td class="py-3 px-6 text-left whitespace-nowrap">${provider.name}</td>
                                                 <td class="py-3 px-6 text-left">${provider.service}</td>
+                                                <td class="py-3 px-6 text-left">${provider.category && provider.category.length > 0 ? provider.category.join(', ') : 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center">${provider.casa || 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center">${provider.horario || 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center flex justify-center gap-2">
@@ -502,7 +571,7 @@
                         const id = e.currentTarget.dataset.id;
                         const provider = providers.find(p => p.id === id);
                         if (provider) {
-                            form = { ...provider, horario: provider.horario || '' };
+                            form = { ...provider, categories: provider.category || [] }; // Ajustado para categories
                             editMode = true;
                             editProviderId = id;
                             renderAdminPage();
@@ -552,7 +621,8 @@
                 view = 'public';
                 editMode = false;
                 editProviderId = null;
-                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '' };
+                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] };
+                selectedCategory = '';
                 render();
             });
         } else {
