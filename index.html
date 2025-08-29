@@ -146,16 +146,9 @@
         let adminLoggedIn = false;
         let searchTerm = '';
         let selectedCategory = '';
-        let form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] }; // Alterado para categories
+        let form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', category: '' };
         let editMode = false;
         let editProviderId = null;
-
-        // Lista de categorias disponíveis
-        const availableCategories = [
-            'Uber', 'Alimentação', 'Transportadoras', 'Manutenção residencial',
-            'Advocacia', 'Cuidados pessoais', 'Venda de produtos', 'Impressão',
-            'Pedagógico'
-        ];
 
         // Referências aos elementos do DOM
         const contentDiv = document.getElementById('content');
@@ -187,13 +180,6 @@
         async function saveProviderToFirestore(newProvider) {
             loadingModal.style.display = 'flex';
             try {
-                // Coleta as categorias selecionadas
-                const selectedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(input => input.value);
-                if (selectedCategories.length === 0) {
-                    showModal("Por favor, selecione pelo menos uma categoria.");
-                    return;
-                }
-                newProvider.category = selectedCategories; // Armazena como array
                 if (editMode && editProviderId) {
                     await setDoc(doc(db, `fornecedores`, editProviderId), newProvider, { merge: true });
                     showModal("Fornecedor atualizado com sucesso!");
@@ -201,7 +187,7 @@
                     await addDoc(collection(db, `fornecedores`), newProvider);
                     showModal("Fornecedor adicionado com sucesso!");
                 }
-                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] };
+                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', category: '' };
                 editMode = false;
                 editProviderId = null;
                 renderAdminPage();
@@ -262,8 +248,8 @@
             const filteredProviders = providers.filter(provider => {
                 const matchesSearch = provider.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                                       provider.service.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                      (provider.category && provider.category.some(cat => cat.toLowerCase().includes(searchTerm.toLowerCase())));
-                const matchesCategory = !selectedCategory || (provider.category && provider.category.includes(selectedCategory));
+                                      (provider.category && provider.category.toLowerCase().includes(searchTerm.toLowerCase()));
+                const matchesCategory = !selectedCategory || (provider.category && provider.category === selectedCategory);
                 return matchesSearch && matchesCategory;
             });
 
@@ -273,10 +259,10 @@
                         <div>
                             <h3 class="text-xl font-semibold text-slate-800 mb-1">${provider.name}</h3>
                             <p class="text-teal-600 font-medium mb-4">${provider.service}</p>
-                            ${provider.category && provider.category.length > 0 ? `
+                            ${provider.category ? `
                             <div class="text-sm text-slate-500 flex items-center gap-2 mb-4">
                                 <svg class="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5l6-6 6 6m-6-6v12" /></svg>
-                                Categoria: <span class="font-semibold text-slate-700">${provider.category.join(', ')}</span>
+                                Categoria: <span class="font-semibold text-slate-700">${provider.category}</span>
                             </div>
                             ` : ''}
                             ${provider.casa ? `
@@ -353,15 +339,14 @@
                     </div>
                     <div class="mb-8 flex flex-wrap gap-2 justify-center">
                         <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="">Todos</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Uber">Uber</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Alimentação">Alimentação</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Transportadoras">Transportadoras</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Manutenção residencial">Manutenção residencial</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Advocacia">Advocacia</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Cuidados pessoais">Cuidados pessoais</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Venda de produtos">Venda de produtos</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Impressão">Impressão</button>
-                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="Pedagógico">Pedagógico</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🚗Uber">Uber</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🥗Alimentação">Alimentação</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🚚Transportadoras">Transportadoras</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🛠Manutenção residencial">Manutenção residencial</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🤵Advocacia">Advocacia</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="👩‍⚕️Cuidados pessoais">Cuidados pessoais</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🏬Venda de produtos">Venda de produtos</button>
+                        <button class="category-btn px-4 py-2 rounded-lg font-semibold bg-slate-200 text-slate-600 hover:bg-slate-300 transition-colors duration-300" data-category="🖨Impressão">Impressão</button>
                     </div>
                     <div id="providers-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     </div>
@@ -461,15 +446,18 @@
                                     <input type="text" id="service" name="service" value="${form.service}" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500" />
                                 </div>
                                 <div class="md:col-span-2">
-                                    <label class="block text-sm font-medium text-slate-700 mb-1">Categorias (selecione pelo menos uma)</label>
-                                    <div class="grid grid-cols-2 gap-4">
-                                        ${availableCategories.map(category => `
-                                            <label class="flex items-center space-x-2">
-                                                <input type="checkbox" name="category" value="${category}" ${form.categories.includes(category) ? 'checked' : ''} class="h-4 w-4 text-teal-600 focus:ring-teal-500 border-gray-300 rounded"/>
-                                                <span class="text-sm text-slate-700">${category}</span>
-                                            </label>
-                                        `).join('')}
-                                    </div>
+                                    <label for="category" class="block text-sm font-medium text-slate-700 mb-1">Categoria</label>
+                                    <select id="category" name="category" required class="w-full p-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500">
+                                        <option value="" disabled ${form.category ? '' : 'selected'}>Selecione uma categoria</option>
+                                        <option value="Uber" ${form.category === 'Uber' ? 'selected' : ''}>Uber</option>
+                                        <option value="Alimentação" ${form.category === 'Alimentação' ? 'selected' : ''}>Alimentação</option>
+                                        <option value="Transportadoras" ${form.category === 'Transportadoras' ? 'selected' : ''}>Transportadoras</option>
+                                        <option value="Manutenção residencial" ${form.category === 'Manutenção residencial' ? 'selected' : ''}>Manutenção residencial</option>
+                                        <option value="Advocacia" ${form.category === 'Advocacia' ? 'selected' : ''}>Advocacia</option>
+                                        <option value="Cuidados pessoais" ${form.category === 'Cuidados pessoais' ? 'selected' : ''}>Cuidados pessoais</option>
+                                        <option value="Venda de produtos" ${form.category === 'Venda de produtos' ? 'selected' : ''}>Venda de produtos</option>
+                                        <option value="Impressão" ${form.category === 'Impressão' ? 'selected' : ''}>Impressão</option>
+                                    </select>
                                 </div>
                                 <div>
                                     <label for="casa" class="block text-sm font-medium text-slate-700 mb-1">Número da Casa (opcional)</label>
@@ -503,7 +491,7 @@
                                         <tr class="bg-slate-100 text-slate-600 uppercase text-sm leading-normal">
                                             <th class="py-3 px-6 text-left">Nome</th>
                                             <th class="py-3 px-6 text-left">Serviço</th>
-                                            <th class="py-3 px-6 text-left">Categorias</th>
+                                            <th class="py-3 px-6 text-left">Categoria</th>
                                             <th class="py-3 px-6 text-center">Casa</th>
                                             <th class="py-3 px-6 text-center">Horário</th>
                                             <th class="py-3 px-6 text-center">Ações</th>
@@ -514,7 +502,7 @@
                                             <tr class="border-b border-gray-200 hover:bg-slate-50">
                                                 <td class="py-3 px-6 text-left whitespace-nowrap">${provider.name}</td>
                                                 <td class="py-3 px-6 text-left">${provider.service}</td>
-                                                <td class="py-3 px-6 text-left">${provider.category && provider.category.length > 0 ? provider.category.join(', ') : 'Não informado'}</td>
+                                                <td class="py-3 px-6 text-left">${provider.category || 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center">${provider.casa || 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center">${provider.horario || 'Não informado'}</td>
                                                 <td class="py-3 px-6 text-center flex justify-center gap-2">
@@ -558,6 +546,7 @@
                         saveProviderToFirestore({
                             name: e.target.name.value,
                             service: e.target.service.value,
+                            category: e.target.category.value,
                             casa: e.target.casa.value || '',
                             contact: e.target.contact.value,
                             instagram: e.target.instagram.value || '',
@@ -573,7 +562,7 @@
                         const id = e.currentTarget.dataset.id;
                         const provider = providers.find(p => p.id === id);
                         if (provider) {
-                            form = { ...provider, categories: provider.category || [] }; // Ajustado para categories
+                            form = { ...provider, horario: provider.horario || '', category: provider.category || '' };
                             editMode = true;
                             editProviderId = id;
                             renderAdminPage();
@@ -623,7 +612,7 @@
                 view = 'public';
                 editMode = false;
                 editProviderId = null;
-                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', categories: [] };
+                form = { name: '', service: '', casa: '', contact: '', instagram: '', horario: '', category: '' };
                 selectedCategory = '';
                 render();
             });
@@ -660,5 +649,3 @@
     </script>
 </body>
 </html>
-
-
